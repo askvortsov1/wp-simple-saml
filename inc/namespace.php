@@ -498,11 +498,11 @@ function map_user_roles( $user, array $attributes ) {
 		return;
 	}
 
+	$curr_blog = get_current_blog_id();
+
 	// Manage super admin flag
 	if ( is_sso_enabled_network_wide() ) {
 		if ( isset( $roles['network'] ) && in_array( 'superadmin', $roles['network'], true ) ) {
-			$roles = array_diff( $roles['network'], [ 'superadmin' ] );
-
 			if ( ! is_super_admin( $user->ID ) ) {
 				grant_super_admin( $user->ID );
 			}
@@ -554,6 +554,8 @@ function map_user_roles( $user, array $attributes ) {
 			$user->add_role( $role );
 		}
 	}
+	switch_to_blog($curr_blog);
+	$user->for_site($curr_blog);
 }
 
 /**
@@ -757,8 +759,7 @@ function get_user_roles_from_sso( \WP_User $user, array $attributes ) {
 	 * @return string|array WP Role(s) to apply to the user
 	 */
 	$roles = (array) apply_filters( 'wpsimplesaml_map_role', get_option( 'default_role' ), $attributes, $user->ID, $user );
-	$roles = array_unique( array_filter( $roles ) );
-
+	$roles = array_filter( $roles );
 	if ( empty( $roles ) ) {
 		return [];
 	}
@@ -769,6 +770,7 @@ function get_user_roles_from_sso( \WP_User $user, array $attributes ) {
 		// If this is a multisite, the roles array may contain a 'network' key and a 'sites' key. Otherwise, if
 		// it is a flat array, use it to add the roles for all sites
 		if ( is_numeric( key( $roles ) ) ) { // Not an associative array ?
+
 			if ( is_array( current( $roles ) ) ) {
 				// Nested array? then it is a `sites` definition, expect array of roles for each site
 				$network_roles['sites'] = $roles;
@@ -780,6 +782,5 @@ function get_user_roles_from_sso( \WP_User $user, array $attributes ) {
 			$network_roles = [];
 		}
 	}
-
-	return $network_roles ?? (array) $roles;
+	return $network_roles ?: (array) $roles;
 }
